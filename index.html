@@ -2,110 +2,110 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Smart Face Attendance</title>
+<title>SMART FACE ATTENDANCE SYSTEM</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
     body {
         font-family: Arial, sans-serif;
         background: #0f172a;
-        color: #fff;
+        color: white;
         text-align: center;
+        margin: 0;
         padding: 20px;
     }
 
     h1 {
         color: #4ade80;
-        margin-bottom: 10px;
+        margin-bottom: 5px;
+    }
+
+    #cameraBox {
+        width: 70%;
+        height: 300px;
+        border: 3px solid #4ade80;
+        border-radius: 12px;
+        margin: 20px auto;
+        position: relative;
     }
 
     video {
+        width: 100%;
+        height: 100%;
         border-radius: 12px;
-        border: 2px solid #4ade80;
-        width: 360px;
-        height: auto;
-        margin-top: 10px;
+        object-fit: cover;
     }
 
     canvas {
         position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
+        top: 0;
+        left: 0;
     }
 
-    #messageBox {
-        margin-top: 15px;
-        font-size: 18px;
-        padding: 10px;
-        border-radius: 10px;
-        display: none;
-    }
-
-    .success {
-        background: #14532d;
-        border: 1px solid #4ade80;
-    }
-
-    .error {
-        background: #450a0a;
-        border: 1px solid #ef4444;
-    }
-
-    .dash {
-        margin-top: 25px;
+    .container {
         display: flex;
         justify-content: space-around;
+        margin-top: 30px;
         flex-wrap: wrap;
     }
 
     .box {
+        width: 40%;
+        min-width: 280px;
         background: #1e293b;
-        padding: 15px;
+        padding: 20px;
         border-radius: 10px;
-        width: 45%;
-        min-width: 250px;
     }
 
-    .present {
-        color: #4ade80;
+    .present { color: #4ade80; font-size: 20px; font-weight: bold; }
+    .pending { color: #facc15; font-size: 20px; font-weight: bold; }
+
+    #message {
+        margin-top: 15px;
+        padding: 12px;
+        font-size: 18px;
+        border-radius: 10px;
+        display: none;
     }
 
-    .pending {
-        color: #fbbf24;
-    }
+    .success { background: #14532d; border: 1px solid #4ade80; }
+    .error   { background: #450a0a; border: 1px solid #ef4444; }
 
 </style>
 </head>
+
 <body>
 
 <h1>SMART FACE ATTENDANCE SYSTEM</h1>
 <p>Face Recognition will automatically mark attendance for registered students.</p>
 
 <!-- CAMERA AREA -->
-<video id="video" autoplay></video>
-<canvas id="canvas"></canvas>
+<div id="cameraBox">
+    <video id="video" autoplay muted></video>
+    <canvas id="canvas"></canvas>
+</div>
 
-<div id="messageBox"></div>
+<div id="message"></div>
 
-<!-- DASHBOARD -->
-<div class="dash">
+<div class="container">
     <div class="box">
-        <h3 class="present">Present Students</h3>
+        <div class="present">Present Students</div>
         <ul id="presentList"></ul>
     </div>
 
     <div class="box">
-        <h3 class="pending">Pending Students</h3>
+        <div class="pending">Pending Students</div>
         <ul id="pendingList"></ul>
     </div>
 </div>
 
-<!-- FACE API JS -->
+<p style="margin-top:40px;opacity:0.7;">Developed by <b>Keerthana</b> & <b>Hari Chandhana</b></p>
+
 <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
 
 <script>
 
-// Student list
+// Student Data
 const students = [
     { name: "Keerthana", file: "students/Keerthana.jpeg" },
     { name: "Hari Chandana", file: "students/Hari_Chandana.jpeg" },
@@ -117,45 +117,39 @@ const students = [
 let present = [];
 let pending = students.map(s => s.name);
 
-// Update dashboard
-function updateDashboard() {
+function updateUI() {
     document.getElementById("presentList").innerHTML =
-        present.map(x => `<li> ${x} ✔</li>`).join("");
+        present.map(p => `<li>${p} ✔</li>`).join("");
 
     document.getElementById("pendingList").innerHTML =
-        pending.map(x => `<li> ${x} ⏳</li>`).join("");
+        pending.map(p => `<li>${p} ⏳</li>`).join("");
 }
 
-updateDashboard();
+updateUI();
 
-// Show message
-function showMessage(type, text) {
-    let box = document.getElementById("messageBox");
+function showMsg(type, text) {
+    let box = document.getElementById("message");
     box.style.display = "block";
+    box.className = type === "success" ? "success" : "error";
     box.innerHTML = text;
-
-    if (type === "success") {
-        box.className = "success";
-    } else {
-        box.className = "error";
-    }
 }
 
-// Load models + student images
+// Load Models
 Promise.all([
     faceapi.nets.tinyFaceDetector.loadFromUri("models"),
     faceapi.nets.faceLandmark68Net.loadFromUri("models"),
     faceapi.nets.faceRecognitionNet.loadFromUri("models")
 ]).then(loadFaces);
 
-// Creating labeled face descriptors
+// Load Student Images
 async function loadFaces() {
     const labeled = [];
 
-    for (const s of students) {
+    for (let s of students) {
         const img = await faceapi.fetchImage(s.file);
-        const det = await faceapi.detectSingleFace(img,
-            new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+        const det = await faceapi.detectSingleFace(
+            img, new faceapi.TinyFaceDetectorOptions()
+        ).withFaceLandmarks().withFaceDescriptor();
 
         labeled.push(new faceapi.LabeledFaceDescriptors(s.name, [det.descriptor]));
     }
@@ -163,61 +157,57 @@ async function loadFaces() {
     startCamera(labeled);
 }
 
-// Start camera
+// Start Webcam + Recognition
 async function startCamera(labeledFaces) {
-    const video = document.getElementById("video");
 
-    const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+    const video = document.getElementById("video");
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
     video.srcObject = stream;
 
-    video.addEventListener('play', () => {
+    video.onplay = () => {
         const canvas = document.getElementById("canvas");
-        const ctx = canvas.getContext("2d");
+        const displaySize = { width: video.clientWidth, height: video.clientHeight };
 
-        canvas.width = video.width;
-        canvas.height = video.height;
+        canvas.width = displaySize.width;
+        canvas.height = displaySize.height;
 
         const matcher = new faceapi.FaceMatcher(labeledFaces, 0.45);
 
         setInterval(async () => {
-            const det = await faceapi.detectAllFaces(video,
-                new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const dets = await faceapi.detectAllFaces(
+                video, new faceapi.TinyFaceDetectorOptions()
+            ).withFaceLandmarks().withFaceDescriptors();
 
-            const resized = faceapi.resizeResults(det, {
-                width: canvas.width,
-                height: canvas.height
-            });
+            const resized = faceapi.resizeResults(dets, displaySize);
+
+            canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
 
             resized.forEach(d => {
+                const match = matcher.findBestMatch(d.descriptor).label;
                 const box = d.detection.box;
+
+                let ctx = canvas.getContext("2d");
                 ctx.strokeStyle = "#4ade80";
                 ctx.lineWidth = 2;
                 ctx.strokeRect(box.x, box.y, box.width, box.height);
 
-                const bestMatch = matcher.findBestMatch(d.descriptor).label;
+                ctx.fillStyle = "#4ade80";
+                ctx.fillText(match, box.x, box.y - 5);
 
-                ctx.fillStyle = "black";
-                ctx.fillText(bestMatch, box.x, box.y - 5);
-
-                if (bestMatch !== "unknown" && pending.includes(bestMatch)) {
-                    present.push(bestMatch);
-                    pending = pending.filter(n => n !== bestMatch);
-                    showMessage("success", `✔ Attendance taken for <b>${bestMatch}</b>`);
-                    updateDashboard();
+                if (match !== "unknown" && pending.includes(match)) {
+                    present.push(match);
+                    pending = pending.filter(n => n !== match);
+                    updateUI();
+                    showMsg("success", `✔ Attendance taken for <b>${match}</b>`);
                 }
             });
 
         }, 300);
-    });
+    };
 }
 
 </script>
-
-<div style="margin-top:20px;opacity:0.7;">
-    Developed by <b>Keerthana</b> & <b>Hari Chandhana</b>
-</div>
 
 </body>
 </html>
